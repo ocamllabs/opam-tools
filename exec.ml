@@ -18,7 +18,8 @@ open Bos
 open Rresult
 open Astring
 
-let rec iter fn l = match l with hd :: tl -> fn hd >>= fun () -> iter fn tl | [] -> Ok ()
+let rec iter fn l =
+  match l with hd :: tl -> fn hd >>= fun () -> iter fn tl | [] -> Ok ()
 
 let run_and_log_s ?(ignore_error = false) cmd =
   OS.File.tmp "opam-tools-run-%s.stderr" >>= fun tmp_file ->
@@ -43,7 +44,8 @@ let run_and_log_s ?(ignore_error = false) cmd =
           Error (`Msg "Command execution failed")
       | Error (`Msg m) -> Error (`Msg m) )
 
-let run_and_log ?ignore_error cmd = run_and_log_s ?ignore_error cmd >>= fun _ -> Ok ()
+let run_and_log ?ignore_error cmd =
+  run_and_log_s ?ignore_error cmd >>= fun _ -> Ok ()
 
 let run_and_log_l ?ignore_error cmd =
   run_and_log_s ?ignore_error cmd >>= fun out ->
@@ -68,29 +70,31 @@ let opam_version () =
   | Error (`Msg _) -> Error (`Msg "opam not installed on system")
 
 let ocaml_version ?ocamlc () =
-  let oc = match ocamlc with None -> Cmd.v "ocamlc" | Some x -> Cmd.(v @@ p x) in
+  let oc =
+    match ocamlc with None -> Cmd.v "ocamlc" | Some x -> Cmd.(v @@ p x)
+  in
   match run_and_log_s ~ignore_error:false Cmd.(oc % "-version") with
-  | Ok s -> begin
+  | Ok s -> (
       match Ocaml_version.of_string s with
       | Ok v -> Ok v
-      | Error (`Msg _) -> Error (`Msg "unable to parse OCaml string from ocamlc")
-  end
+      | Error (`Msg _) ->
+          Error (`Msg "unable to parse OCaml string from ocamlc") )
   | Error (`Msg _) -> Error (`Msg "unable to find an installed ocamlc")
-
 
 let run_opam ?(ignore_error = false) args =
   run_and_log ~ignore_error Cmd.(v "opam" %% args)
 
 let run_opam_s ?(ignore_error = false) args =
   run_and_log_s ~ignore_error Cmd.(v "opam" %% args)
-  
+
 let run_opam_l ?(ignore_error = false) args =
   run_and_log_l ~ignore_error Cmd.(v "opam" %% args)
-  
 
 let install_ocaml_to ~prefix ~src () =
-  OS.Dir.with_current src (fun () ->
-    run_and_log Cmd.(v "./configure" % "--prefix" % p prefix) >>= fun () ->
-    run_and_log Cmd.(v "make" % "-j" % "world.opt") >>= fun () ->
-    run_and_log Cmd.(v "make" % "install")
-  ) () >>= fun x -> x
+  OS.Dir.with_current src
+    (fun () ->
+      run_and_log Cmd.(v "./configure" % "--prefix" % p prefix) >>= fun () ->
+      run_and_log Cmd.(v "make" % "-j" % "world.opt") >>= fun () ->
+      run_and_log Cmd.(v "make" % "install"))
+    ()
+  >>= fun x -> x
