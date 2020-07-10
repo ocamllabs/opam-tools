@@ -2,4 +2,4 @@
  (name opam_tools)
  (public_name opam-tools)
  (libraries rresult fmt.cli cmdliner ocaml-version bos fmt fmt.tty logs.cli
-   logs.fmt ezjsonm))
+   logs.fmt ezjsonm dune-build-info))

@@ -14,6 +14,7 @@
  (description "opam-tools sets up a local project to have a working set of opam libraries and development tools such as dune, odoc, ocamlformat and IDE helpers like merlin and ocaml-lsp.  This is all made available by simply typing in `opam tools` in your project directory.")
  (depends
   (ocaml (>= 4.08.0))
+  dune-build-info
   rresult
   ocaml-version
   fmt

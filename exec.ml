@@ -82,13 +82,13 @@ let ocaml_version ?ocamlc () =
   | Error (`Msg _) -> Error (`Msg "unable to find an installed ocamlc")
 
 let run_opam ?(ignore_error = false) args =
-  run_and_log ~ignore_error Cmd.(v "opam" %% args)
+  run_and_log ~ignore_error Cmd.(v "opam" %% args % "--color=never")
 
 let run_opam_s ?(ignore_error = false) args =
-  run_and_log_s ~ignore_error Cmd.(v "opam" %% args)
+  run_and_log_s ~ignore_error Cmd.(v "opam" %% args % "--color=never")
 
 let run_opam_l ?(ignore_error = false) args =
-  run_and_log_l ~ignore_error Cmd.(v "opam" %% args)
+  run_and_log_l ~ignore_error Cmd.(v "opam" %% args % "--color=never")
 
 let install_ocaml_to ~prefix ~src () =
   OS.Dir.with_current src

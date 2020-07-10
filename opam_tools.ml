@@ -35,7 +35,7 @@ let opam_tools_src = Fpath.(opam_tools_root / "src")
 
 let tool_switch_name ov = Fmt.strf "opam-tools-%a" OV.pp ov
 
-let tools =
+let default_tools =
   [
     "ocamlformat";
     "merlin";
@@ -124,6 +124,9 @@ let install_ocaml_in_tools ov =
   OS.File.write
     Fpath.(prefix / "ocaml-system.opam")
     (opam_file_for_ocaml prefix ov)
+  >>= fun () ->
+  Exec.run_opam
+    Cmd.(v "pin" % "add" % "-y" % "--inplace-build" % "ocaml-system" % p prefix)
 
 let create_tools_switch ov =
   Exec.run_opam_l Cmd.(v "switch" % "list" % "-s") >>= fun all_sw ->
@@ -146,7 +149,7 @@ let ocamlformat_version_l =
 
 let ocamlformat_version () = Lazy.force ocamlformat_version_l
 
-let install_tools_in_tools_switch ov =
+let install_tools_in_tools_switch tools ov =
   let tools =
     match ocamlformat_version () with
     | None -> tools
@@ -165,29 +168,40 @@ let setup_local_switch ov =
   let local_switch = Fpath.v "_opam" in
   OS.Dir.exists local_switch >>= function
   | false ->
-      Logs.info (fun l -> l "Creating local opam switch for project");
+      Logs.info (fun l -> l "Creating local opam switch for project.");
       Exec.run_opam Cmd.(v "switch" % "create" % "." % "--empty") >>= fun () ->
       ( match ov with
       | Some ov -> Ok ov
       | None -> calculate_ocaml_compiler_from_project () )
       >>= fun ov ->
-      let compiler_dir = Fpath.(opam_tools_root / OV.to_string ov) in
-      install_ocaml_in_tools ov >>= fun () ->
-      Exec.run_opam
-        Cmd.(
-          v "pin" % "add" % "-y" % "--inplace-build" % "ocaml-system"
-          % p compiler_dir)
-      >>= fun () -> Ok ov
-  | true ->
+      install_ocaml_in_tools ov >>= fun () -> Ok ov
+  | true -> (
       Exec.run_opam_s
-        Cmd.(
-          v "show" % "ocaml" % "-f" % "version" % "--normalise"
-          % "--color=never")
+        Cmd.(v "show" % "ocaml" % "-f" % "version" % "--normalise")
       >>= fun ovraw ->
-      OV.of_string ovraw >>= fun ov ->
-      Logs.debug (fun l ->
-          l "Local switch directory exists already with OCaml %a" OV.pp ov);
-      Ok ov
+      OV.of_string ovraw >>= fun ov_local ->
+      match (ov, ov_local) with
+      | Some ov, ov_local when ov = ov_local ->
+          Logs.info (fun l ->
+              l
+                "Local switch exists already containing OCaml %a which is the \
+                 same as the one requested"
+                OV.pp ov);
+          Ok ov
+      | None, _ ->
+          Logs.info (fun l ->
+              l
+                "Local switch exists already containing OCaml %a, so \
+                 defaulting to it"
+                OV.pp ov_local);
+          Ok ov_local
+      | Some ov, ov_local ->
+          Logs.info (fun l ->
+              l
+                "Local switch has a different OCaml version %a than the \
+                 requested %a, so reinstalling it."
+                OV.pp ov_local OV.pp ov);
+          install_ocaml_in_tools ov >>= fun () -> Ok ov_local )
 
 let copy_binaries_for_package ov dst pkg =
   let sw = tool_switch_name ov in
@@ -218,17 +232,16 @@ let copy_binaries_for_package ov dst pkg =
           OS.Path.link ~force:true ~target dst)
         l
 
-let copy_tools_to_local_switch ov =
+let copy_tools_to_local_switch tools ov =
   create_tools_switch ov >>= fun () ->
-  install_tools_in_tools_switch ov >>= fun () ->
+  install_tools_in_tools_switch tools ov >>= fun () ->
   let dstdir = Fpath.(v "_opam" / "bin") in
   Exec.iter (copy_binaries_for_package ov dstdir) tools
 
-let setup_local_switch ov =
-  Logs.debug (fun l -> l "Setting up a local switch");
+let main tools ov =
   setup_local_switch ov >>= fun ov ->
   Logs.debug (fun l -> l "Using OCaml version %a for tools" OV.pp ov);
-  copy_tools_to_local_switch ov
+  copy_tools_to_local_switch tools ov
 
 open Cmdliner
 
@@ -244,21 +257,40 @@ let setup_logs () =
     $ Fmt_cli.style_renderer ~docs:global_option_section ()
     $ Logs_cli.level ~docs:global_option_section ())
 
-let ov_term : OV.t option Term.t =
+let ov_term =
   let ov_conv = Arg.conv ~docv:"OCAML_VERSION" (OV.of_string, OV.pp) in
-  let doc = "Version of the OCaml compiler to use for this project" in
+  let doc =
+    "Version of the OCaml compiler to use for this project. If omitted, this \
+     defaults to the most recent version that is compatible with the packages \
+     used by the project."
+  in
   Arg.(
     value
     & opt (some ov_conv) None
     & info [ "c"; "compiler" ] ~docv:"COMPILER" ~doc)
 
+let tools_term =
+  let doc =
+    "Tools to install within the local switch. These can be any opam packages, \
+     but only the binaries will be copied to the local switch."
+  in
+  Arg.(
+    value
+    & opt (list string) default_tools
+    & info [ "tools" ] ~docv:"TOOLS" ~doc)
+
 let cmd_term =
-  let run ov () = setup_local_switch ov in
-  Term.(pure run $ ov_term $ setup_logs ())
+  let run tools ov () = main tools ov in
+  Term.(pure run $ tools_term $ ov_term $ setup_logs ())
+
+let version =
+  match Build_info.V1.version () with
+  | None -> "n/a"
+  | Some v -> Build_info.V1.Version.to_string v
 
 let cmd_info =
-  Term.info "opam-tools" ~version:"TODO"
-    ~doc:"Install the development tools needed for a project in a local switch"
+  Term.info "opam-tools" ~version
+    ~doc:"Install development tools within a local switch"
     ~man:[ `S "DESCRIPTION" ]
 
 let () = Term.(exit @@ eval (cmd_term, cmd_info))
