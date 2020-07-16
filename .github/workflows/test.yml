@@ -19,3 +19,8 @@ jobs:
       run: opam depext -yt opam-tools
     - name: Build
       run: opam install -t opam-tools
+    - name: Test
+      run: |
+        git clone git://github.com/mirage/irmin --depth=1 /tmp/irmin
+        cd /tmp/irmin
+        opam tools -vv
