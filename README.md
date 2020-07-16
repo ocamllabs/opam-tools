@@ -1,4 +1,4 @@
-# opam-tools - initialise a development environment for an opam project
+# opam-tools - initialise development environment for an OCaml project
 
 NAME
        opam-tools - Install development tools within a local switch
