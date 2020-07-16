@@ -9,10 +9,9 @@
  (targets usage.md)
  (deps header.md opam-tools.1)
  (action
-   (with-stdout-to
-     %{targets}
-     (progn
-       (cat header.md)
-       (cat opam-tools.1)
-       (cat footer.md)
-     ))))
+  (with-stdout-to
+   %{targets}
+   (progn
+    (cat header.md)
+    (cat opam-tools.1)
+    (cat footer.md)))))

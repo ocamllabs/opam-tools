@@ -309,7 +309,7 @@ let version =
 let cmd_info =
   Term.info "opam-tools" ~version
     ~doc:"Install development tools within a local switch"
-    ~man_xrefs: (`Tool "opam" :: (List.map (fun x -> `Tool x) default_tools))
+    ~man_xrefs:(`Tool "opam" :: List.map (fun x -> `Tool x) default_tools)
     ~man:
       [
         `S "DESCRIPTION";
