@@ -20,4 +20,4 @@ jobs:
     - name: Build
       run: opam install -t opam-tools
     - name: Test
-      run: bash ./tests/bootstrap.sh
+      run: opam exec -- dune runtest
