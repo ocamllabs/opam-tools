@@ -252,8 +252,10 @@ let main ~no_deps tools ov =
     >>= fun _local_pkgs ->
     (* Exec.run_opam Cmd.(v "pin" % "add" % "-ny" % ".") >>= fun () -> *)
     (* Exec.run_opam Cmd.(v "--yes" % "depext" %% of_list local_pkgs) >>= fun () -> *)
-    Exec.run_opam
-      Cmd.(v "install" % "." % "--deps-only" % "--with-test" % "--with-doc") )
+    Exec.stream
+      Cmd.(
+        v "opam" % "install" % "-y" % "." % "--deps-only" % "--with-test"
+        % "--with-doc") )
 
 open Cmdliner
 

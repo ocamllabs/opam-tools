@@ -21,6 +21,21 @@ open Astring
 let rec iter fn l =
   match l with hd :: tl -> fn hd >>= fun () -> iter fn tl | [] -> Ok ()
 
+let stream cmd =
+  let bin, args =
+    Cmd.to_list cmd |> function
+    | hd :: tl -> (hd, Array.of_list (hd :: tl))
+    | _ -> failwith "invalid command"
+  in
+  let open Unix in
+  Logs.debug (fun l ->
+      l "Exec: %s" (String.concat ~sep:" " (Array.to_list args)));
+  let _ = create_process bin args stdin stdout stderr in
+  match wait () with
+  | _, WEXITED 0 -> Ok ()
+  | _, WEXITED e -> Error (`Msg (Fmt.strf "Exited with code %d" e))
+  | _, _ -> Error (`Msg "Process terminated abruptly")
+
 let run_and_log_s ?(ignore_error = false) cmd =
   OS.File.tmp "opam-tools-run-%s.stderr" >>= fun tmp_file ->
   let err = OS.Cmd.err_file tmp_file in

@@ -1,3 +1,5 @@
 (test
  (name test)
+ (action
+  (run %{test} %{bin:opam-tools}))
  (libraries bos rresult))
