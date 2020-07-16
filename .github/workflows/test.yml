@@ -21,6 +21,7 @@ jobs:
       run: opam install -t opam-tools
     - name: Test
       run: |
-        git clone git://github.com/mirage/irmin --depth=1 /tmp/irmin
-        cd /tmp/irmin
+        mkdir -p extra/src
+        git clone git://github.com/mirage/irmin --depth=1 extra/src/irmin
+        cd extra/src/irmin
         opam tools -vv
