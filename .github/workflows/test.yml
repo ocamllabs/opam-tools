@@ -20,8 +20,4 @@ jobs:
     - name: Build
       run: opam install -t opam-tools
     - name: Test
-      run: |
-        mkdir -p extra/src
-        git clone git://github.com/mirage/irmin --depth=1 extra/src/irmin
-        cd extra/src/irmin
-        opam tools -vv
+      run: bash ./tests/bootstrap.sh
