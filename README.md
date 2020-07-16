@@ -1,5 +1,7 @@
 # opam-tools - initialise development environment for an OCaml project
 
+```
+
 NAME
        opam-tools - Install development tools within a local switch
 
@@ -67,6 +69,8 @@ COMMON OPTIONS
 SEE ALSO
        dune(1), dune-release(1), mdx(1), merlin(1), ocaml-lsp-server(1),
        ocamlformat(1), odoc(1), opam(1)
+
+```
 
 # Contact
 
