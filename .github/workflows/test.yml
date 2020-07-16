@@ -1,0 +1,21 @@
+name: Opam Tools
+on: [push, pull_request]
+jobs:
+  latest:
+    name: Latest
+    runs-on: ${{ matrix.operating-system }}
+    strategy:
+      fail-fast: false
+      matrix:
+        ocaml-version: [ '4.10.0', '4.09.1', '4.08.1']
+        operating-system: [macos-latest, ubuntu-latest, windows-latest]
+    steps:
+    - uses: actions/checkout@v2
+    - uses: avsm/setup-ocaml@v1.1.0
+      with:
+        ocaml-version: ${{ matrix.ocaml-version }}
+    - run: opam pin add -n .
+    - name: Packages
+      run: opam depext -yt opam-tools
+    - name: Build
+      run: opam install -t opam-tools
