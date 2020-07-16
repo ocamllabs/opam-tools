@@ -238,10 +238,21 @@ let copy_tools_to_local_switch tools ov =
   let dstdir = Fpath.(v "_opam" / "bin") in
   Exec.iter (copy_binaries_for_package ov dstdir) tools
 
-let main tools ov =
+let main ~no_deps tools ov =
   setup_local_switch ov >>= fun ov ->
   Logs.debug (fun l -> l "Using OCaml version %a for tools" OV.pp ov);
-  copy_tools_to_local_switch tools ov
+  copy_tools_to_local_switch tools ov >>= fun () ->
+  if no_deps then Ok ()
+  else (
+    Logs.app (fun l -> l "Installing local project dependencies.");
+    OS.Dir.contents ~rel:true Fpath.(v ".")
+    >>| List.filter (Fpath.has_ext ".opam")
+    >>| List.map Fpath.rem_ext >>| List.map Fpath.to_string
+    >>= fun local_pkgs ->
+    Exec.run_opam Cmd.(v "pin" % "add" % "-ny" % ".") >>= fun () ->
+    Exec.run_opam Cmd.(v "--yes" % "depext" %% of_list local_pkgs) >>= fun () ->
+    Exec.run_opam
+      Cmd.(v "install" % "." % "--deps-only" % "--with-test" % "--with-doc") )
 
 open Cmdliner
 
@@ -279,9 +290,16 @@ let tools_term =
     & opt (list string) default_tools
     & info [ "tools" ] ~docv:"TOOLS" ~doc)
 
+let no_deps_term =
+  let doc =
+    "When creating a local switch, don't look for any local package \
+     definitions to install."
+  in
+  Arg.(value & opt bool false & info [ "no-install" ] ~doc)
+
 let cmd_term =
-  let run tools ov () = main tools ov in
-  Term.(pure run $ tools_term $ ov_term $ setup_logs ())
+  let run no_deps tools ov () = main ~no_deps tools ov in
+  Term.(pure run $ no_deps_term $ tools_term $ ov_term $ setup_logs ())
 
 let version =
   match Build_info.V1.version () with
@@ -291,6 +309,27 @@ let version =
 let cmd_info =
   Term.info "opam-tools" ~version
     ~doc:"Install development tools within a local switch"
-    ~man:[ `S "DESCRIPTION" ]
+    ~man_xrefs: (`Tool "opam" :: (List.map (fun x -> `Tool x) default_tools))
+    ~man:
+      [
+        `S "DESCRIPTION";
+        `P
+          "$(b,opam-tools) installs a local development environment for an \
+           OCaml project.  It first sets up an opam local switch, which is an \
+           $(i,_opam) directory that contains all the dependencies required to \
+           build your code.  Since you also need some development tools for \
+           building, testing and documenting your code, it installs the \
+           binaries for those inside $(i,_opam/bin).";
+        `P
+          "The opam package manager automatically adds this to your PATH for \
+           most shells, or else it will be added automatically if you use \
+           $(b,opam exec --) to run your commands.  Thus, the end result of \
+           invoking $(b,opam-tools) is that all the tools and dependencies \
+           will be available locally after the command completes.";
+        `P
+          "If you ever need to refresh the versions of the tools, just run \
+           $(b,opam update) to get the latest package descriptions, and \
+           $(b,opam tools) again to reinstall them.";
+      ]
 
 let () = Term.(exit @@ eval (cmd_term, cmd_info))

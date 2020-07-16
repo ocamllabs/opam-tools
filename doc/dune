@@ -1,0 +1,18 @@
+(rule
+ (targets opam-tools.1)
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ../opam_tools.exe --help=plain))))
+
+(rule
+ (targets usage.md)
+ (deps header.md opam-tools.1)
+ (action
+   (with-stdout-to
+     %{targets}
+     (progn
+       (cat header.md)
+       (cat opam-tools.1)
+       (cat footer.md)
+     ))))
