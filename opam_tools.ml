@@ -170,6 +170,7 @@ let setup_local_switch ov =
   | false ->
       Logs.info (fun l -> l "Creating local opam switch for project.");
       Exec.run_opam Cmd.(v "switch" % "create" % "." % "--empty") >>= fun () ->
+      Exec.run_opam Cmd.(v "pin" % "add" % "-ny" % ".") >>= fun () ->
       ( match ov with
       | Some ov -> Ok ov
       | None -> calculate_ocaml_compiler_from_project () )
@@ -248,9 +249,9 @@ let main ~no_deps tools ov =
     OS.Dir.contents ~rel:true Fpath.(v ".")
     >>| List.filter (Fpath.has_ext ".opam")
     >>| List.map Fpath.rem_ext >>| List.map Fpath.to_string
-    >>= fun local_pkgs ->
-    Exec.run_opam Cmd.(v "pin" % "add" % "-ny" % ".") >>= fun () ->
-    Exec.run_opam Cmd.(v "--yes" % "depext" %% of_list local_pkgs) >>= fun () ->
+    >>= fun _local_pkgs ->
+    (* Exec.run_opam Cmd.(v "pin" % "add" % "-ny" % ".") >>= fun () -> *)
+    (* Exec.run_opam Cmd.(v "--yes" % "depext" %% of_list local_pkgs) >>= fun () -> *)
     Exec.run_opam
       Cmd.(v "install" % "." % "--deps-only" % "--with-test" % "--with-doc") )
 
