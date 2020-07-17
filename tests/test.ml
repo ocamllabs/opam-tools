@@ -6,6 +6,12 @@ let opam = Cmd.(v "opam" % "exec" % "--")
 
 let opam_tools = Sys.getcwd () ^ "/" ^ Sys.argv.(1)
 
+let check = function
+  | Ok v -> v
+  | Error (`Msg msg) ->
+      Printf.printf "Error: %s\n%!" msg;
+      exit 1
+
 let run dir =
   OS.Dir.with_current dir
     (fun () ->
@@ -13,9 +19,9 @@ let run dir =
       >>= (fun () ->
             OS.Cmd.run Cmd.(opam % "dune" % "build" % "@install" % "@doc")
             >>= fun () -> OS.Cmd.run Cmd.(v "ls" % "-la" % "_opam/bin"))
-      |> R.get_ok)
+      |> check)
     ()
-  |> R.get_ok
+  |> check
 
 let () =
   List.iter
@@ -23,12 +29,13 @@ let () =
       OS.Dir.with_tmp
         (format_of_string "opamtools%s")
         (fun dir () ->
+          let dir = Fpath.(dir / proj) in
           Printf.printf "\nCloning %s to %s\n%!" proj (Fpath.to_string dir);
           OS.Cmd.run
-            Cmd.(v "opam" % "source" % proj % "--dir" % p Fpath.(dir / proj))
+            Cmd.(v "opam" % "source" % proj % "--safe" % "--dir" % p dir)
           |> R.get_ok;
           Printf.printf "Testing: %s\n%!" proj;
-          run Fpath.(dir / proj))
+          run dir)
         ()
-      |> R.get_ok)
+      |> check)
     [ "patdiff"; "mirage"; "qcow"; "h2" ]

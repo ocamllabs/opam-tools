@@ -36,34 +36,27 @@ let stream cmd =
   | _, WEXITED e -> Error (`Msg (Fmt.strf "Exited with code %d" e))
   | _, _ -> Error (`Msg "Process terminated abruptly")
 
-let run_and_log_s ?(ignore_error = false) cmd =
+let run_and_log_s cmd =
   OS.File.tmp "opam-tools-run-%s.stderr" >>= fun tmp_file ->
   let err = OS.Cmd.err_file tmp_file in
   let res = OS.Cmd.(run_out ~err cmd |> out_string) in
-  match ignore_error with
-  | true -> (
-      match res with
-      | Ok (stdout, _) -> Ok stdout
-      | Error (`Msg _) -> OS.File.read tmp_file >>= fun stderr -> Ok stderr )
-  | false -> (
-      match res with
-      | Ok (stdout, (_, `Exited 0)) -> Ok stdout
-      | Ok (stdout, _) ->
-          OS.File.read tmp_file >>= fun stderr ->
-          Logs.err (fun l ->
-              l "%a failed. Output was:@.%a%a"
-                Fmt.(styled `Cyan Cmd.pp)
-                cmd
-                Fmt.(styled `Red text)
-                stderr Fmt.text (String.trim stdout));
-          Error (`Msg "Command execution failed")
-      | Error (`Msg m) -> Error (`Msg m) )
+  match res with
+  | Ok (stdout, (_, `Exited 0)) -> Ok stdout
+  | Ok (stdout, _) ->
+      OS.File.read tmp_file >>= fun stderr ->
+      Logs.err (fun l ->
+          l "%a failed. Output was:@.%a%a"
+            Fmt.(styled `Cyan Cmd.pp)
+            cmd
+            Fmt.(styled `Red text)
+            stderr Fmt.text (String.trim stdout));
+      Error (`Msg "Command execution failed")
+  | Error (`Msg m) -> Error (`Msg m)
 
-let run_and_log ?ignore_error cmd =
-  run_and_log_s ?ignore_error cmd >>= fun _ -> Ok ()
+let run_and_log cmd = run_and_log_s cmd >>= fun _ -> Ok ()
 
-let run_and_log_l ?ignore_error cmd =
-  run_and_log_s ?ignore_error cmd >>= fun out ->
+let run_and_log_l cmd =
+  run_and_log_s cmd >>= fun out ->
   R.ok (String.cuts ~sep:"\n" out |> List.map String.trim)
 
 let map fn l =
@@ -80,7 +73,7 @@ let map fn l =
   | e -> e
 
 let opam_version () =
-  match run_and_log_s ~ignore_error:false Cmd.(v "opam" % "--version") with
+  match run_and_log_s Cmd.(v "opam" % "--version") with
   | Ok v -> Ok v
   | Error (`Msg _) -> Error (`Msg "opam not installed on system")
 
@@ -88,7 +81,7 @@ let ocaml_version ?ocamlc () =
   let oc =
     match ocamlc with None -> Cmd.v "ocamlc" | Some x -> Cmd.(v @@ p x)
   in
-  match run_and_log_s ~ignore_error:false Cmd.(oc % "-version") with
+  match run_and_log_s Cmd.(oc % "-version") with
   | Ok s -> (
       match Ocaml_version.of_string s with
       | Ok v -> Ok v
@@ -96,14 +89,11 @@ let ocaml_version ?ocamlc () =
           Error (`Msg "unable to parse OCaml string from ocamlc") )
   | Error (`Msg _) -> Error (`Msg "unable to find an installed ocamlc")
 
-let run_opam ?(ignore_error = false) args =
-  run_and_log ~ignore_error Cmd.(v "opam" %% args % "--color=never")
+let run_opam args = run_and_log Cmd.(v "opam" %% args % "--color=never")
 
-let run_opam_s ?(ignore_error = false) args =
-  run_and_log_s ~ignore_error Cmd.(v "opam" %% args % "--color=never")
+let run_opam_s args = run_and_log_s Cmd.(v "opam" %% args % "--color=never")
 
-let run_opam_l ?(ignore_error = false) args =
-  run_and_log_l ~ignore_error Cmd.(v "opam" %% args % "--color=never")
+let run_opam_l args = run_and_log_l Cmd.(v "opam" %% args % "--color=never")
 
 let install_ocaml_to ~prefix ~src () =
   OS.Dir.with_current src
