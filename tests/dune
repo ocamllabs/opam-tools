@@ -1,5 +1,5 @@
 (test
- (name test)
+ (name opam_tools_test)
  (action
   (run %{test} %{bin:opam-tools}))
  (libraries bos rresult))
