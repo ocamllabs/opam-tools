@@ -32,8 +32,8 @@ let () =
           let dir = Fpath.(dir / proj) in
           Printf.printf "\nCloning %s to %s\n%!" proj (Fpath.to_string dir);
           OS.Cmd.run
-            Cmd.(v "opam" % "source" % proj % "--safe" % "--dir" % p dir)
-          |> R.get_ok;
+            Cmd.(v "opam" % "source" % proj % "--debug" % "--dir" % p dir)
+          |> check;
           Printf.printf "Testing: %s\n%!" proj;
           run dir)
         ()
