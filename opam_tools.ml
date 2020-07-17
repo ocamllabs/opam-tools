@@ -239,6 +239,15 @@ let copy_tools_to_local_switch tools ov =
   let dstdir = Fpath.(v "_opam" / "bin") in
   Exec.iter (copy_binaries_for_package ov dstdir) tools
 
+let opam_version () =
+  Exec.run_opam_s Cmd.(v "--version") >>= fun v ->
+  OpamVersionCompare.compare v "1.99" |> function
+  | r when r <= 0 -> Error (`Msg "opam 2.0.0 or higher is required.")
+  | _ -> (
+      OpamVersionCompare.compare v "2.0.99" |> function
+      | r when r <= 0 -> Ok `Opam_20
+      | _ -> Ok `Opam_21 )
+
 let main ~no_deps tools ov =
   setup_local_switch ov >>= fun ov ->
   Logs.debug (fun l -> l "Using OCaml version %a for tools" OV.pp ov);
@@ -249,13 +258,20 @@ let main ~no_deps tools ov =
     OS.Dir.contents ~rel:true Fpath.(v ".")
     >>| List.filter (Fpath.has_ext ".opam")
     >>| List.map Fpath.rem_ext >>| List.map Fpath.to_string
-    >>= fun _local_pkgs ->
-    (* Exec.run_opam Cmd.(v "pin" % "add" % "-ny" % ".") >>= fun () -> *)
-    (* Exec.run_opam Cmd.(v "--yes" % "depext" %% of_list local_pkgs) >>= fun () -> *)
-    Exec.stream
-      Cmd.(
-        v "opam" % "install" % "-y" % "." % "--deps-only" % "--with-test"
-        % "--with-doc") )
+    >>= fun local_pkgs ->
+    opam_version () >>= function
+    | `Opam_20 ->
+        Exec.stream Cmd.(v "opam" % "--yes" % "depext" %% of_list local_pkgs)
+        >>= fun () ->
+        Exec.stream
+          Cmd.(
+            v "opam" % "install" % "-y" % "." % "--deps-only" % "--with-test"
+            % "--with-doc")
+    | `Opam_21 ->
+        Exec.stream
+          Cmd.(
+            v "opam" % "install" % "-y" % "." % "--deps-only" % "--with-test"
+            % "--with-doc") )
 
 open Cmdliner
 
