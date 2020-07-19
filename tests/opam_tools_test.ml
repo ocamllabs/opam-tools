@@ -38,4 +38,4 @@ let () =
           run dir)
         ()
       |> check)
-    [ "patdiff"; "mirage"; "qcow"; "h2" ]
+    [ "patdiff"; "mirage"; "h2-lwt" ]
