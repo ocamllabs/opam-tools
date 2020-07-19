@@ -39,7 +39,15 @@ OPTIONS
 
        --no-install=VAL (absent=false)
            When creating a local switch, don't look for any local package
-           definitions to install.
+           definitions to install. This can be useful when you just want to
+           get tools installed for a new or work-in-progress project.
+
+       --pin-tool=NAME,URL
+           Override the opam definition of a tool with a custom opam pin.
+           This will cause the tools switch to receive that pin, so it will
+           apply to all future projects with the same OCaml version as well.
+           Format is <toolname>,<url> to specify a pin URL, or simply
+           <toolname>,--dev to use the latest development version.
 
        --tools=TOOLS
        (absent=ocamlformat,merlin,mdx,dune,odoc,ocaml-lsp-server,dune-release)

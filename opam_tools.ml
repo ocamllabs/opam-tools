@@ -149,7 +149,8 @@ let ocamlformat_version_l =
 
 let ocamlformat_version () = Lazy.force ocamlformat_version_l
 
-let install_tools_in_tools_switch tools ov =
+let install_tools_in_tools_switch ~pin_tools tools ov =
+  (* ocamlformat has special version handling by detecting the .ocamlformat file *)
   let tools =
     match ocamlformat_version () with
     | None -> tools
@@ -157,11 +158,20 @@ let install_tools_in_tools_switch tools ov =
         List.map (function "ocamlformat" -> "ocamlformat." ^ v | x -> x) tools
   in
   let args = Cmd.(v "--switch" % tool_switch_name ov) in
-  (* TODO until release of lsp in opam *)
-  Exec.run_opam
-    Cmd.(
-      v "pin" % "add" % "-ny" % "ocaml-lsp-server"
-      % "https://github.com/ocaml/ocaml-lsp.git" %% args)
+  let pin_tools =
+    if
+      List.exists
+        (fun (pkg, _) -> Astring.String.is_prefix ~affix:"ocaml-lsp-server" pkg)
+        pin_tools
+    then pin_tools
+    else
+      ("ocaml-lsp-server", "https://github.com/ocaml/ocaml-lsp.git")
+      :: pin_tools
+  in
+  Exec.iter
+    (fun (pkg, url) ->
+      Exec.run_opam Cmd.(v "pin" % "add" % "-ny" % pkg % url %% args))
+    pin_tools
   >>= fun () -> Exec.run_opam Cmd.(v "install" % "-y" %% of_list tools %% args)
 
 let setup_local_switch ov =
@@ -233,9 +243,9 @@ let copy_binaries_for_package ov dst pkg =
           OS.Path.link ~force:true ~target dst)
         l
 
-let copy_tools_to_local_switch tools ov =
+let copy_tools_to_local_switch ~pin_tools tools ov =
   create_tools_switch ov >>= fun () ->
-  install_tools_in_tools_switch tools ov >>= fun () ->
+  install_tools_in_tools_switch tools ~pin_tools ov >>= fun () ->
   let dstdir = Fpath.(v "_opam" / "bin") in
   Exec.iter (copy_binaries_for_package ov dstdir) tools
 
@@ -248,10 +258,10 @@ let opam_version () =
       | r when r <= 0 -> Ok `Opam_20
       | _ -> Ok `Opam_21 )
 
-let main ~no_deps tools ov =
+let main ~no_deps ~pin_tools tools ov =
   setup_local_switch ov >>= fun ov ->
   Logs.debug (fun l -> l "Using OCaml version %a for tools" OV.pp ov);
-  copy_tools_to_local_switch tools ov >>= fun () ->
+  copy_tools_to_local_switch ~pin_tools tools ov >>= fun () ->
   if no_deps then Ok ()
   else (
     Logs.app (fun l -> l "Installing local project dependencies.");
@@ -309,16 +319,32 @@ let tools_term =
     & opt (list string) default_tools
     & info [ "tools" ] ~docv:"TOOLS" ~doc)
 
+let pin_tools_term =
+  let doc =
+    "Override the opam definition of a tool with a custom $(i,opam pin). This \
+     will cause the tools switch to receive that pin, so it will apply to all \
+     future projects with the same OCaml version as well. Format is \
+     $(i,<toolname>,<url>) to specify a pin URL, or simply \
+     $(i,<toolname>,--dev) to use the latest development version."
+  in
+  Arg.(
+    value
+    & opt_all (pair ~sep:',' string string) []
+    & info [ "pin-tool" ] ~docv:"NAME,URL" ~doc)
+
 let no_deps_term =
   let doc =
     "When creating a local switch, don't look for any local package \
-     definitions to install."
+     definitions to install.  This can be useful when you just want to get \
+     tools installed for a new or work-in-progress project."
   in
   Arg.(value & opt bool false & info [ "no-install" ] ~doc)
 
 let cmd_term =
-  let run no_deps tools ov () = main ~no_deps tools ov in
-  Term.(pure run $ no_deps_term $ tools_term $ ov_term $ setup_logs ())
+  let run no_deps tools ov pin_tools () = main ~no_deps ~pin_tools tools ov in
+  Term.(
+    pure run $ no_deps_term $ tools_term $ ov_term $ pin_tools_term
+    $ setup_logs ())
 
 let version =
   match Build_info.V1.version () with
