@@ -26,9 +26,9 @@ let run dir =
 let () =
   List.iter
     (fun proj ->
-      OS.Dir.with_tmp
-        (format_of_string "opamtools%s")
-        (fun dir () ->
+      let dir = Fpath.v "opamtoolstest" in
+      OS.Dir.with_current dir
+        (fun () ->
           let dir = Fpath.(dir / proj) in
           Printf.printf "\nCloning %s to %s\n%!" proj (Fpath.to_string dir);
           OS.Cmd.run
@@ -38,4 +38,4 @@ let () =
           run dir)
         ()
       |> check)
-    [ "patdiff"; "mirage"; "h2-lwt" ]
+    [ "patdiff"; "mirage"; "atdgen" ]
