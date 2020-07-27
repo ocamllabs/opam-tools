@@ -44,6 +44,7 @@ let default_tools =
     "odoc";
     "ocaml-lsp-server";
     "dune-release";
+    "duniverse"
   ]
 
 let calculate_ocaml_compiler_from_project () =
