@@ -347,7 +347,7 @@ let no_deps_term =
      definitions to install.  This can be useful when you just want to get \
      tools installed for a new or work-in-progress project."
   in
-  Arg.(value & opt bool false & info [ "no-install" ] ~doc)
+  Arg.(value & flag & info [ "no-install" ] ~doc)
 
 let cmd_term =
   let run no_deps tools ov pin_tools () = main ~no_deps ~pin_tools tools ov in

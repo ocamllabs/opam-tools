@@ -37,7 +37,7 @@ OPTIONS
            `pager', `groff' or `plain'. With `auto', the format is `pager` or
            `plain' whenever the TERM env var is `dumb' or undefined.
 
-       --no-install=VAL (absent=false)
+       --no-install
            When creating a local switch, don't look for any local package
            definitions to install. This can be useful when you just want to
            get tools installed for a new or work-in-progress project.
