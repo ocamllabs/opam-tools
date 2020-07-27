@@ -44,7 +44,7 @@ let default_tools =
     "odoc";
     "ocaml-lsp-server";
     "dune-release";
-    "duniverse"
+    "duniverse";
   ]
 
 let calculate_ocaml_compiler_from_project () =
@@ -159,15 +159,23 @@ let install_tools_in_tools_switch ~pin_tools tools ov =
         List.map (function "ocamlformat" -> "ocamlformat." ^ v | x -> x) tools
   in
   let args = Cmd.(v "--switch" % tool_switch_name ov) in
+  let pin_overrides =
+    (* builtin overrides for tools not released yet *)
+    [
+      ("ocaml-lsp-server", "https://github.com/ocaml/ocaml-lsp.git");
+      ("duniverse", "https://github.com/ocamllabs/duniverse.git");
+    ]
+  in
   let pin_tools =
-    if
-      List.exists
-        (fun (pkg, _) -> Astring.String.is_prefix ~affix:"ocaml-lsp-server" pkg)
-        pin_tools
-    then pin_tools
-    else
-      ("ocaml-lsp-server", "https://github.com/ocaml/ocaml-lsp.git")
-      :: pin_tools
+    List.fold_left
+      (fun pin_tools (tool, pin_url) ->
+        if
+          List.exists
+            (fun (pkg, _) -> Astring.String.is_prefix ~affix:tool pkg)
+            pin_tools
+        then pin_tools
+        else (tool, pin_url) :: pin_tools)
+      pin_tools pin_overrides
   in
   Exec.iter
     (fun (pkg, url) ->

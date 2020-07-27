@@ -27,7 +27,8 @@ let () =
   List.iter
     (fun proj ->
       let dir = Fpath.v "opamtoolstest" in
-      OS.Dir.create dir |> check |> fun _ -> ();
+      OS.Dir.create dir |> check |> fun _ ->
+      ();
       OS.Dir.with_current dir
         (fun () ->
           let dir = Fpath.(dir / proj) in

@@ -50,7 +50,7 @@ OPTIONS
            <toolname>,--dev to use the latest development version.
 
        --tools=TOOLS
-       (absent=ocamlformat,merlin,mdx,dune,odoc,ocaml-lsp-server,dune-release)
+       (absent=ocamlformat,merlin,mdx,dune,odoc,ocaml-lsp-server,dune-release,duniverse)
            Tools to install within the local switch. These can be any opam
            packages, but only the binaries will be copied to the local
            switch.
@@ -75,8 +75,8 @@ COMMON OPTIONS
            `warning', `info' or `debug'. Takes over -v.
 
 SEE ALSO
-       dune(1), dune-release(1), mdx(1), merlin(1), ocaml-lsp-server(1),
-       ocamlformat(1), odoc(1), opam(1)
+       dune(1), dune-release(1), duniverse(1), mdx(1), merlin(1),
+       ocaml-lsp-server(1), ocamlformat(1), odoc(1), opam(1)
 
 ```
 
