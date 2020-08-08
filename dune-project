@@ -1,7 +1,7 @@
 (lang dune 2.6)
 (name opam-tools)
 
-(generate_opam_files true)
+(generate_opam_files false)
 
 (source (github ocaml-opam/opam-tools))
 (license ISC)
